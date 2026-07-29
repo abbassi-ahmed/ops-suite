@@ -1,0 +1,691 @@
+{
+  "id": "ops-suite",
+  "slug": "abbassi-ahmed/ops-suite",
+  "publisher_pubkey": "9abc7c335eb5dd531227be9797f429fd40b4069ad25698e74529957f1f740b02",
+  "version": "0.1.0",
+  "description": "All-in-one governed ops suite: 16 Stripe payment commands (refunds, disputes, subscriptions, invoices, PaymentIntents), 10 Twilio SMS/voice commands, and 3 cross-provider billing-reminder commands that look up a real Stripe invoice and text its amount and due date via Twilio -- one signed bundle, every write gated by RailCall's preview -> approve -> execute airlock. contest:2026Q3",
+  "auth": {
+    "type": "multi_provider",
+    "env_vars": [
+      "STRIPE_SECRET_KEY",
+      "TWILIO_ACCOUNT_SID",
+      "TWILIO_AUTH_TOKEN"
+    ]
+  },
+  "commands": [
+    {
+      "id": "list_charges",
+      "name": "list_charges",
+      "description": "List recent charges, optionally filtered by customer.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "customer_id": {
+          "type": "string",
+          "required": false,
+          "description": "Stripe customer ID (cus_...) to filter by. Optional."
+        },
+        "limit": {
+          "type": "number",
+          "required": false,
+          "description": "Max results, 1-100."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "get_customer",
+      "name": "get_customer",
+      "description": "Fetch a single customer's profile and balance.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "customer_id": {
+          "type": "string",
+          "required": true,
+          "description": "Stripe customer ID (cus_...)."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "search_customers",
+      "name": "search_customers",
+      "description": "Find customers by name or email when you don't have their cus_ ID. This is how you turn a person's name (e.g. 'Riley Novak') into their customer ID before looking up their charges or invoices. Returns matching customers with their id, name, and email.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "name": {
+          "type": "string",
+          "required": false,
+          "description": "Customer name to match (exact, case-insensitive)."
+        },
+        "email": {
+          "type": "string",
+          "required": false,
+          "description": "Customer email to match."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "get_payment_intent",
+      "name": "get_payment_intent",
+      "description": "Fetch one PaymentIntent by ID: its status, amount, capture state, and the underlying charge. Use this to verify a pi_... someone gives you (e.g. copied from the Stripe dashboard) before refunding or canceling it.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "payment_intent_id": {
+          "type": "string",
+          "required": true,
+          "description": "PaymentIntent ID (pi_...)."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "list_disputes",
+      "name": "list_disputes",
+      "description": "List open and recent disputes/chargebacks.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "limit": {
+          "type": "number",
+          "required": false,
+          "description": "Max results, 1-100."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "create_refund",
+      "name": "create_refund",
+      "description": "Refund a charge or payment intent, in full or in part. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "charge_id": {
+          "type": "string",
+          "required": false,
+          "description": "Charge ID (ch_...). Provide this OR payment_intent_id."
+        },
+        "payment_intent_id": {
+          "type": "string",
+          "required": false,
+          "description": "PaymentIntent ID (pi_...). Provide this OR charge_id."
+        },
+        "amount_cents": {
+          "type": "number",
+          "required": false,
+          "description": "Partial refund amount in cents. Omit for a full refund."
+        },
+        "reason": {
+          "type": "string",
+          "required": false,
+          "description": "One of: duplicate, fraudulent, requested_by_customer."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "respond_to_dispute",
+      "name": "respond_to_dispute",
+      "description": "Submit evidence on a dispute. Money-relevant (affects dispute outcome): gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "medium",
+      "provider": "stripe",
+      "input_schema": {
+        "dispute_id": {
+          "type": "string",
+          "required": true,
+          "description": "Dispute ID (dp_...)."
+        },
+        "evidence_text": {
+          "type": "string",
+          "required": true,
+          "description": "Uncategorized evidence text explaining the transaction."
+        },
+        "submit": {
+          "required": false,
+          "description": "If true, submit immediately. If false, save evidence as a draft without submitting."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "cancel_subscription",
+      "name": "cancel_subscription",
+      "description": "Cancel a customer's subscription, immediately or at period end. Revenue-affecting: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "subscription_id": {
+          "type": "string",
+          "required": true,
+          "description": "Subscription ID (sub_...)."
+        },
+        "at_period_end": {
+          "required": false,
+          "description": "If true, cancel at the end of the current billing period instead of immediately."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "capture_payment_intent",
+      "name": "capture_payment_intent",
+      "description": "Capture a previously authorized (uncaptured) payment, in full or in part. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "payment_intent_id": {
+          "type": "string",
+          "required": true,
+          "description": "PaymentIntent ID (pi_...)."
+        },
+        "amount_to_capture_cents": {
+          "type": "number",
+          "required": false,
+          "description": "Partial capture amount in cents. Omit to capture the full authorized amount."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "cancel_payment_intent",
+      "name": "cancel_payment_intent",
+      "description": "Cancel an uncaptured PaymentIntent, releasing its authorization so it can never be captured. Use this instead of a refund for a charge that hasn't been captured yet -- Stripe rejects refunds on uncaptured charges. Money-relevant: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "payment_intent_id": {
+          "type": "string",
+          "required": true,
+          "description": "PaymentIntent ID (pi_...)."
+        },
+        "cancellation_reason": {
+          "type": "string",
+          "required": false,
+          "description": "One of: duplicate, fraudulent, requested_by_customer, abandoned."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "void_invoice",
+      "name": "void_invoice",
+      "description": "Void a draft or open invoice so it can no longer be paid or collected. Money-relevant: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "medium",
+      "provider": "stripe",
+      "input_schema": {
+        "invoice_id": {
+          "type": "string",
+          "required": true,
+          "description": "Invoice ID (in_...)."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "search_charges",
+      "name": "search_charges",
+      "description": "Filtered charge search (amount range, status, customer, date window) using Stripe's Search Query Language -- not just a plain list.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "min_amount_cents": {
+          "type": "number",
+          "required": false,
+          "description": "Only charges >= this amount, in cents."
+        },
+        "max_amount_cents": {
+          "type": "number",
+          "required": false,
+          "description": "Only charges <= this amount, in cents."
+        },
+        "status": {
+          "type": "string",
+          "required": false,
+          "description": "One of: succeeded, pending, failed."
+        },
+        "customer_id": {
+          "type": "string",
+          "required": false,
+          "description": "Stripe customer ID (cus_...) to filter by."
+        },
+        "created_after": {
+          "type": "number",
+          "required": false,
+          "description": "Unix timestamp; only charges created after this."
+        },
+        "created_before": {
+          "type": "number",
+          "required": false,
+          "description": "Unix timestamp; only charges created before this."
+        },
+        "limit": {
+          "type": "number",
+          "required": false,
+          "description": "Max results, 1-100."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "customer_360",
+      "name": "customer_360",
+      "description": "One-call customer overview: profile + recent charges + subscriptions, joined together. Saves 3 separate lookups.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "customer_id": {
+          "type": "string",
+          "required": true,
+          "description": "Stripe customer ID (cus_...)."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "list_disputes_due_soon",
+      "name": "list_disputes_due_soon",
+      "description": "Disputes filtered and sorted by urgency -- only ones whose evidence deadline is within N days, soonest first.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "within_days": {
+          "type": "number",
+          "required": false,
+          "description": "Deadline window in days. Defaults to 7."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "bulk_refund",
+      "name": "bulk_refund",
+      "description": "Refund up to 25 charges in one airlock-approved action. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "charge_ids": {
+          "type": "array",
+          "required": true,
+          "description": "List of charge IDs (ch_...) to refund, up to 25."
+        },
+        "reason": {
+          "type": "string",
+          "required": false,
+          "description": "One of: duplicate, fraudulent, requested_by_customer. Applied to every refund in the batch."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "cancel_subscription_and_refund",
+      "name": "cancel_subscription_and_refund",
+      "description": "Multi-step: cancels a subscription AND refunds its latest invoice's charge in one airlock-approved action. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "subscription_id": {
+          "type": "string",
+          "required": true,
+          "description": "Subscription ID (sub_...)."
+        },
+        "at_period_end": {
+          "required": false,
+          "description": "If true, cancel at period end instead of immediately. Defaults to false (immediate)."
+        },
+        "also_refund_latest_invoice": {
+          "required": false,
+          "description": "If false, only cancels (no refund). Defaults to true."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "list_messages",
+      "name": "list_messages",
+      "description": "List recent sent/received SMS messages, optionally filtered by to/from number.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {
+        "to": {
+          "type": "string",
+          "required": false,
+          "description": "Filter by recipient phone number (E.164, e.g. +15551234567)."
+        },
+        "from": {
+          "type": "string",
+          "required": false,
+          "description": "Filter by sender phone number."
+        },
+        "limit": {
+          "type": "number",
+          "required": false,
+          "description": "Max results, 1-100."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "get_message",
+      "name": "get_message",
+      "description": "Fetch one message's full status and details by SID.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {
+        "message_sid": {
+          "type": "string",
+          "required": true,
+          "description": "Message SID (SM...)."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "search_messages",
+      "name": "search_messages",
+      "description": "Filtered message search: to/from number, date range, and status -- not just a plain list.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {
+        "to": {
+          "type": "string",
+          "required": false,
+          "description": "Filter by recipient phone number."
+        },
+        "from": {
+          "type": "string",
+          "required": false,
+          "description": "Filter by sender phone number."
+        },
+        "date_sent_after": {
+          "type": "string",
+          "required": false,
+          "description": "YYYY-MM-DD; only messages sent after this date."
+        },
+        "date_sent_before": {
+          "type": "string",
+          "required": false,
+          "description": "YYYY-MM-DD; only messages sent before this date."
+        },
+        "status": {
+          "type": "string",
+          "required": false,
+          "description": "One of: queued, sending, sent, failed, delivered, undelivered, receiving, received."
+        },
+        "limit": {
+          "type": "number",
+          "required": false,
+          "description": "Max results, 1-100."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "list_calls",
+      "name": "list_calls",
+      "description": "List recent voice calls, optionally filtered by recipient.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {
+        "to": {
+          "type": "string",
+          "required": false,
+          "description": "Filter by recipient phone number."
+        },
+        "limit": {
+          "type": "number",
+          "required": false,
+          "description": "Max results, 1-100."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "account_usage",
+      "name": "account_usage",
+      "description": "One-call overview: account balance + this month's usage records, joined together.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {},
+      "side_effects": "none"
+    },
+    {
+      "id": "send_sms",
+      "name": "send_sms",
+      "description": "Send one SMS message. Money-moving and compliance-relevant: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "to": {
+          "type": "string",
+          "required": true,
+          "description": "Recipient phone number (E.164, e.g. +15551234567). Must be a verified caller ID on trial accounts."
+        },
+        "from": {
+          "type": "string",
+          "required": true,
+          "description": "Your Twilio phone number to send from."
+        },
+        "body": {
+          "type": "string",
+          "required": true,
+          "description": "The exact message text to send."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "make_call",
+      "name": "make_call",
+      "description": "Place one voice call that reads a short message aloud. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "to": {
+          "type": "string",
+          "required": true,
+          "description": "Recipient phone number. Must be a verified caller ID on trial accounts."
+        },
+        "from": {
+          "type": "string",
+          "required": true,
+          "description": "Your Twilio phone number to call from."
+        },
+        "say_text": {
+          "type": "string",
+          "required": true,
+          "description": "The exact text that will be read aloud on the call."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "bulk_send_sms",
+      "name": "bulk_send_sms",
+      "description": "Send the same message to up to 25 recipients in one airlock-approved action. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "to_numbers": {
+          "type": "array",
+          "required": true,
+          "description": "List of recipient phone numbers, up to 25."
+        },
+        "from": {
+          "type": "string",
+          "required": true,
+          "description": "Your Twilio phone number to send from."
+        },
+        "body": {
+          "type": "string",
+          "required": true,
+          "description": "The exact message text sent to every recipient in the batch."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "draft_and_send_sms",
+      "name": "draft_and_send_sms",
+      "description": "Renders a template + variables into the exact final message text, shows that literal text for review, then sends. The airlock preview shows the real words, not just 'a message will be sent'. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "to": {
+          "type": "string",
+          "required": true,
+          "description": "Recipient phone number. Must be a verified caller ID on trial accounts."
+        },
+        "from": {
+          "type": "string",
+          "required": true,
+          "description": "Your Twilio phone number to send from."
+        },
+        "template": {
+          "type": "string",
+          "required": true,
+          "description": "Message template using {{variable}} placeholders, e.g. 'Hi {{name}}, your order {{order_id}} shipped!'"
+        },
+        "variables": {
+          "type": "object",
+          "required": false,
+          "description": "Object of {name: value} pairs to fill into the template."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "release_phone_number",
+      "name": "release_phone_number",
+      "description": "Deprovisions an owned Twilio number so it can never be used again. Irreversible: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "phone_number_sid": {
+          "type": "string",
+          "required": true,
+          "description": "The phone number's SID (PN...), not the number itself."
+        }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "list_invoices_needing_reminder",
+      "name": "list_invoices_needing_reminder",
+      "description": "List open (unpaid, finalized) Stripe invoices that are due within N days or already overdue, most-overdue first. This is also the way to enumerate unpaid invoices for ANY analysis -- e.g. which customer owes the most, total outstanding, who's overdue -- by passing a large within_days (like 3650) to capture everything open. Each row includes customer_id, customer_name, amount_due (in cents), and due_date. Invoices with no due date are excluded.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "within_days": {
+          "type": "number",
+          "required": false,
+          "description": "Include invoices due within this many days from now. Already-overdue invoices are always included regardless of this value. Defaults to 7."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "preview_invoice_reminder",
+      "name": "preview_invoice_reminder",
+      "description": "Fetch one Stripe invoice and render the exact SMS text send_invoice_reminder_sms would send -- the real amount, due date, and payment link, in the literal wording. Sends nothing. RailCall's own airlock preview only echoes back your typed inputs, not fetched data, so this command exists to let you actually see the message before you approve sending it.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "invoice_id": {
+          "type": "string",
+          "required": true,
+          "description": "Stripe invoice ID (in_...)."
+        },
+        "to": {
+          "type": "string",
+          "required": true,
+          "description": "The phone number this would be sent to (E.164). Included in the preview output only -- nothing is sent by this command."
+        },
+        "custom_note": {
+          "type": "string",
+          "required": false,
+          "description": "Extra sentence appended to the reminder text."
+        }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "send_invoice_reminder_sms",
+      "name": "send_invoice_reminder_sms",
+      "description": "Composite, two providers, one approval: looks up the real Stripe invoice (amount due, due date, hosted payment link), renders the reminder text, and sends it via Twilio SMS. Run preview_invoice_reminder first to see the exact words this will send. Money-relevant and compliance-relevant: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe+twilio",
+      "input_schema": {
+        "invoice_id": {
+          "type": "string",
+          "required": true,
+          "description": "Stripe invoice ID (in_...)."
+        },
+        "to": {
+          "type": "string",
+          "required": true,
+          "description": "Recipient phone number (E.164). Must be a verified caller ID on trial Twilio accounts."
+        },
+        "from": {
+          "type": "string",
+          "required": true,
+          "description": "Your Twilio phone number to send from."
+        },
+        "custom_note": {
+          "type": "string",
+          "required": false,
+          "description": "Extra sentence appended to the reminder text."
+        }
+      },
+      "side_effects": "external"
+    }
+  ],
+  "license_required": false
+}
