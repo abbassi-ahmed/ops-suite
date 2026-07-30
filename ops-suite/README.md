@@ -61,6 +61,14 @@ directly to the same `/api/commands/preview|approve|execute` endpoints
 the browser UI uses — nothing about it is specific to ops-suite; it
 works against any deployed module by `<module>.<command>`.
 
+### Also works natively in RailCall's own Studio
+Once loaded, every ops-suite command shows up under **Sends** in
+RailCall's own Studio (`railcall studio`) with a **Fire** button —
+Studio's own built-in preview → approve → execute flow, no custom UI or
+extra setup required. This is separate from `railcall_term.py` above;
+both drive the exact same airlock API and produce the same kind of
+signed receipt.
+
 ### Optional: a browser view of the same commands
 If you'd also like to browse commands and click through them visually, a
 small local web UI (not included in this repo, not part of the signed

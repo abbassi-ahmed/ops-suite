@@ -6,3 +6,4 @@ __pycache__/
 *.key
 keys.local.json
 .omc/
+ops-suite/DEMO_SCRIPT_TERMINAL.md
