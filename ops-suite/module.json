@@ -16,6 +16,7 @@
     {
       "id": "list_charges",
       "name": "list_charges",
+      "title": "List Charges",
       "description": "List recent charges, optionally filtered by customer.",
       "wired": true,
       "risk": "low",
@@ -37,6 +38,7 @@
     {
       "id": "get_customer",
       "name": "get_customer",
+      "title": "Get Customer",
       "description": "Fetch a single customer's profile and balance.",
       "wired": true,
       "risk": "low",
@@ -53,6 +55,7 @@
     {
       "id": "search_customers",
       "name": "search_customers",
+      "title": "Search Customers",
       "description": "Find customers by name or email when you don't have their cus_ ID. This is how you turn a person's name (e.g. 'Riley Novak') into their customer ID before looking up their charges or invoices. Returns matching customers with their id, name, and email.",
       "wired": true,
       "risk": "low",
@@ -74,6 +77,7 @@
     {
       "id": "get_payment_intent",
       "name": "get_payment_intent",
+      "title": "Get Payment Intent",
       "description": "Fetch one PaymentIntent by ID: its status, amount, capture state, and the underlying charge. Use this to verify a pi_... someone gives you (e.g. copied from the Stripe dashboard) before refunding or canceling it.",
       "wired": true,
       "risk": "low",
@@ -90,6 +94,7 @@
     {
       "id": "list_disputes",
       "name": "list_disputes",
+      "title": "List Disputes",
       "description": "List open and recent disputes/chargebacks.",
       "wired": true,
       "risk": "low",
@@ -106,6 +111,7 @@
     {
       "id": "create_refund",
       "name": "create_refund",
+      "title": "Create Refund",
       "description": "Refund a charge or payment intent, in full or in part. Money-moving: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -138,6 +144,7 @@
     {
       "id": "respond_to_dispute",
       "name": "respond_to_dispute",
+      "title": "Respond to Dispute",
       "description": "Submit evidence on a dispute. Money-relevant (affects dispute outcome): gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -164,6 +171,7 @@
     {
       "id": "cancel_subscription",
       "name": "cancel_subscription",
+      "title": "Cancel Subscription",
       "description": "Cancel a customer's subscription, immediately or at period end. Revenue-affecting: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -185,6 +193,7 @@
     {
       "id": "capture_payment_intent",
       "name": "capture_payment_intent",
+      "title": "Capture Payment Intent",
       "description": "Capture a previously authorized (uncaptured) payment, in full or in part. Money-moving: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -207,6 +216,7 @@
     {
       "id": "cancel_payment_intent",
       "name": "cancel_payment_intent",
+      "title": "Cancel Payment Intent",
       "description": "Cancel an uncaptured PaymentIntent, releasing its authorization so it can never be captured. Use this instead of a refund for a charge that hasn't been captured yet -- Stripe rejects refunds on uncaptured charges. Money-relevant: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -229,6 +239,7 @@
     {
       "id": "void_invoice",
       "name": "void_invoice",
+      "title": "Void Invoice",
       "description": "Void a draft or open invoice so it can no longer be paid or collected. Money-relevant: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -246,6 +257,7 @@
     {
       "id": "search_charges",
       "name": "search_charges",
+      "title": "Search Charges",
       "description": "Filtered charge search (amount range, status, customer, date window) using Stripe's Search Query Language -- not just a plain list.",
       "wired": true,
       "risk": "low",
@@ -292,6 +304,7 @@
     {
       "id": "customer_360",
       "name": "customer_360",
+      "title": "Customer 360",
       "description": "One-call customer overview: profile + recent charges + subscriptions, joined together. Saves 3 separate lookups.",
       "wired": true,
       "risk": "low",
@@ -308,6 +321,7 @@
     {
       "id": "list_disputes_due_soon",
       "name": "list_disputes_due_soon",
+      "title": "Disputes Due Soon",
       "description": "Disputes filtered and sorted by urgency -- only ones whose evidence deadline is within N days, soonest first.",
       "wired": true,
       "risk": "low",
@@ -324,6 +338,7 @@
     {
       "id": "bulk_refund",
       "name": "bulk_refund",
+      "title": "Bulk Refund",
       "description": "Refund up to 25 charges in one airlock-approved action. Money-moving: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -346,6 +361,7 @@
     {
       "id": "cancel_subscription_and_refund",
       "name": "cancel_subscription_and_refund",
+      "title": "Cancel Subscription & Refund",
       "description": "Multi-step: cancels a subscription AND refunds its latest invoice's charge in one airlock-approved action. Money-moving: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -371,6 +387,7 @@
     {
       "id": "list_messages",
       "name": "list_messages",
+      "title": "List Messages",
       "description": "List recent sent/received SMS messages, optionally filtered by to/from number.",
       "wired": true,
       "risk": "low",
@@ -397,6 +414,7 @@
     {
       "id": "get_message",
       "name": "get_message",
+      "title": "Get Message",
       "description": "Fetch one message's full status and details by SID.",
       "wired": true,
       "risk": "low",
@@ -413,6 +431,7 @@
     {
       "id": "search_messages",
       "name": "search_messages",
+      "title": "Search Messages",
       "description": "Filtered message search: to/from number, date range, and status -- not just a plain list.",
       "wired": true,
       "risk": "low",
@@ -454,6 +473,7 @@
     {
       "id": "list_calls",
       "name": "list_calls",
+      "title": "List Calls",
       "description": "List recent voice calls, optionally filtered by recipient.",
       "wired": true,
       "risk": "low",
@@ -475,6 +495,7 @@
     {
       "id": "account_usage",
       "name": "account_usage",
+      "title": "Account Usage",
       "description": "One-call overview: account balance + this month's usage records, joined together.",
       "wired": true,
       "risk": "low",
@@ -485,6 +506,7 @@
     {
       "id": "send_sms",
       "name": "send_sms",
+      "title": "Send SMS",
       "description": "Send one SMS message. Money-moving and compliance-relevant: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -512,6 +534,7 @@
     {
       "id": "make_call",
       "name": "make_call",
+      "title": "Make Call",
       "description": "Place one voice call that reads a short message aloud. Money-moving: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -539,6 +562,7 @@
     {
       "id": "bulk_send_sms",
       "name": "bulk_send_sms",
+      "title": "Bulk Send SMS",
       "description": "Send the same message to up to 25 recipients in one airlock-approved action. Money-moving: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -566,6 +590,7 @@
     {
       "id": "draft_and_send_sms",
       "name": "draft_and_send_sms",
+      "title": "Draft & Send SMS",
       "description": "Renders a template + variables into the exact final message text, shows that literal text for review, then sends. The airlock preview shows the real words, not just 'a message will be sent'. Money-moving: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -598,6 +623,7 @@
     {
       "id": "release_phone_number",
       "name": "release_phone_number",
+      "title": "Release Phone Number",
       "description": "Deprovisions an owned Twilio number so it can never be used again. Irreversible: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
@@ -615,6 +641,7 @@
     {
       "id": "list_invoices_needing_reminder",
       "name": "list_invoices_needing_reminder",
+      "title": "Invoices Needing Reminder",
       "description": "List open (unpaid, finalized) Stripe invoices that are due within N days or already overdue, most-overdue first. This is also the way to enumerate unpaid invoices for ANY analysis -- e.g. which customer owes the most, total outstanding, who's overdue -- by passing a large within_days (like 3650) to capture everything open. Each row includes customer_id, customer_name, amount_due (in cents), and due_date. Invoices with no due date are excluded.",
       "wired": true,
       "risk": "low",
@@ -631,6 +658,7 @@
     {
       "id": "preview_invoice_reminder",
       "name": "preview_invoice_reminder",
+      "title": "Preview Invoice Reminder",
       "description": "Fetch one Stripe invoice and render the exact SMS text send_invoice_reminder_sms would send -- the real amount, due date, and payment link, in the literal wording. Sends nothing. RailCall's own airlock preview only echoes back your typed inputs, not fetched data, so this command exists to let you actually see the message before you approve sending it.",
       "wired": true,
       "risk": "low",
@@ -657,6 +685,7 @@
     {
       "id": "send_invoice_reminder_sms",
       "name": "send_invoice_reminder_sms",
+      "title": "Send Invoice Reminder SMS",
       "description": "Composite, two providers, one approval: looks up the real Stripe invoice (amount due, due date, hosted payment link), renders the reminder text, and sends it via Twilio SMS. Run preview_invoice_reminder first to see the exact words this will send. Money-relevant and compliance-relevant: gated by the airlock.",
       "wired": true,
       "mode": "write_requires_approval",
