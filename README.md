@@ -28,28 +28,55 @@ railcall market install abbassi-ahmed/ops-suite
 Requires three credentials, exported wherever your RailCall Studio server
 runs: `STRIPE_SECRET_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`.
 
-## Run it locally (for development/testing, not required to just use it)
+## Run every command from a terminal — no browser required
+
+Once installed, every command is driven by RailCall's own airlock API
+(`/api/commands/preview` → `approve` → `execute`), and approval accepts a
+`terminal_confirm` method as a first-class peer to a UI click — so the
+whole preview → human-approve → execute → signed-receipt cycle runs from
+a plain terminal command, start to finish:
 
 ```bash
-# 1. Sign (after any edit to module.json or handlers/handler.py)
-python3 sign_module.py
+# 1. Start RailCall Studio with all three credentials exported
+export STRIPE_SECRET_KEY=sk_test_...
+export TWILIO_ACCOUNT_SID=AC...
+export TWILIO_AUTH_TOKEN=...
+railcall studio --no-open   # loads ops-suite from ~/.railcall/station/modules/
 
-# 2. Deploy into RailCall's modules folder
+# 2. Run a read command — instant, no approval needed
+python3 railcall_term.py ops-suite.list_charges --limit=5
+# → prints the airlock card with the real charges, exits
+
+# 3. Run a write command — preview, then a terminal approval prompt
+python3 railcall_term.py ops-suite.create_refund \
+  --charge_id=py_3N... --reason=requested_by_customer
+# → prints the exact refund about to happen (amount, charge, reason)
+# → Approve and execute the above? [y/N] y
+# → prints the signed receipt: refund_id, status, amount, currency
+```
+
+`railcall_term.py` (in the root of this repo) is a small stdlib-only
+terminal client that reads the local Studio session token and posts
+directly to the same `/api/commands/preview|approve|execute` endpoints
+the browser UI uses — nothing about it is specific to ops-suite; it
+works against any deployed module by `<module>.<command>`.
+
+### Optional: a browser view of the same commands
+If you'd also like to browse commands and click through them visually, a
+small local web UI (not included in this repo, not part of the signed
+module bundle) can proxy to the exact same `/api/commands/*` endpoints —
+purely a convenience layer, never required for anything above.
+
+### Deploying a local build for development
+```bash
+python3 sign_module.py   # after any edit to module.json or handlers/handler.py
 mkdir -p ~/.railcall/station/modules/ops-suite/handlers
 cp module.json ~/.railcall/station/modules/ops-suite/module.json
 cp module.sig  ~/.railcall/station/modules/ops-suite/module.sig
 cp handlers/handler.py ~/.railcall/station/modules/ops-suite/handlers/handler.py
-
-# 3. Start the RailCall server with all three credentials exported
-export STRIPE_SECRET_KEY=sk_test_...
-export TWILIO_ACCOUNT_SID=AC...
-export TWILIO_AUTH_TOKEN=...
-python3 ~/.railcall/station/workbench/studio_server.py --no-open
 ```
-
-Wait for `[modules] loaded=... rejected=0`, then drive it through RailCall's
-own command API (`/api/commands/preview`, `/api/commands/approve`,
-`/api/commands/execute`) or a UI built on top of it.
+Then start Studio as in step 1 above and wait for `rejected=0` before
+running commands.
 
 See `TESTING.md` for how this exact logic was verified against real Stripe
 test-mode and Twilio trial accounts before publishing.

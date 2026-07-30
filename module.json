@@ -2,7 +2,7 @@
   "id": "ops-suite",
   "slug": "abbassi-ahmed/ops-suite",
   "publisher_pubkey": "9abc7c335eb5dd531227be9797f429fd40b4069ad25698e74529957f1f740b02",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "All-in-one governed ops suite: 16 Stripe payment commands (refunds, disputes, subscriptions, invoices, PaymentIntents), 10 Twilio SMS/voice commands, and 3 cross-provider billing-reminder commands that look up a real Stripe invoice and text its amount and due date via Twilio -- one signed bundle, every write gated by RailCall's preview -> approve -> execute airlock. contest:2026Q3",
   "auth": {
     "type": "multi_provider",
