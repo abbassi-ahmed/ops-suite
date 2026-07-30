@@ -1,0 +1,154 @@
+{
+  "id": "twilio-ops",
+  "slug": "abbassi-ahmed/twilio-ops",
+  "publisher_pubkey": "9abc7c335eb5dd531227be9797f429fd40b4069ad25698e74529957f1f740b02",
+  "version": "0.1.0",
+  "description": "Airlock-gated Twilio operations for support/ops teams: SMS and voice calls go through preview -> approve -> execute with a signed receipt, including a human-in-the-loop AI-draft review command that shows the exact rendered message text before it sends. Read-only lookups (messages, calls, usage) run instantly. contest:2026Q3",
+  "auth": {
+    "type": "basic_two_part",
+    "env_vars": ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"]
+  },
+  "commands": [
+    {
+      "id": "list_messages",
+      "name": "list_messages",
+      "description": "List recent sent/received SMS messages, optionally filtered by to/from number.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {
+        "to": { "type": "string", "required": false, "description": "Filter by recipient phone number (E.164, e.g. +15551234567)." },
+        "from": { "type": "string", "required": false, "description": "Filter by sender phone number." },
+        "limit": { "type": "number", "required": false, "description": "Max results, 1-100." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "get_message",
+      "name": "get_message",
+      "description": "Fetch one message's full status and details by SID.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {
+        "message_sid": { "type": "string", "required": true, "description": "Message SID (SM...)." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "search_messages",
+      "name": "search_messages",
+      "description": "Filtered message search: to/from number, date range, and status -- not just a plain list.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {
+        "to": { "type": "string", "required": false, "description": "Filter by recipient phone number." },
+        "from": { "type": "string", "required": false, "description": "Filter by sender phone number." },
+        "date_sent_after": { "type": "string", "required": false, "description": "YYYY-MM-DD; only messages sent after this date." },
+        "date_sent_before": { "type": "string", "required": false, "description": "YYYY-MM-DD; only messages sent before this date." },
+        "status": { "type": "string", "required": false, "description": "One of: queued, sending, sent, failed, delivered, undelivered, receiving, received." },
+        "limit": { "type": "number", "required": false, "description": "Max results, 1-100." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "list_calls",
+      "name": "list_calls",
+      "description": "List recent voice calls, optionally filtered by recipient.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {
+        "to": { "type": "string", "required": false, "description": "Filter by recipient phone number." },
+        "limit": { "type": "number", "required": false, "description": "Max results, 1-100." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "account_usage",
+      "name": "account_usage",
+      "description": "One-call overview: account balance + this month's usage records, joined together.",
+      "wired": true,
+      "risk": "low",
+      "provider": "twilio",
+      "input_schema": {},
+      "side_effects": "none"
+    },
+    {
+      "id": "send_sms",
+      "name": "send_sms",
+      "description": "Send one SMS message. Money-moving and compliance-relevant: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "to": { "type": "string", "required": true, "description": "Recipient phone number (E.164, e.g. +15551234567). Must be a verified caller ID on trial accounts." },
+        "from": { "type": "string", "required": true, "description": "Your Twilio phone number to send from." },
+        "body": { "type": "string", "required": true, "description": "The exact message text to send." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "make_call",
+      "name": "make_call",
+      "description": "Place one voice call that reads a short message aloud. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "to": { "type": "string", "required": true, "description": "Recipient phone number. Must be a verified caller ID on trial accounts." },
+        "from": { "type": "string", "required": true, "description": "Your Twilio phone number to call from." },
+        "say_text": { "type": "string", "required": true, "description": "The exact text that will be read aloud on the call." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "bulk_send_sms",
+      "name": "bulk_send_sms",
+      "description": "Send the same message to up to 25 recipients in one airlock-approved action. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "to_numbers": { "type": "array", "required": true, "description": "List of recipient phone numbers, up to 25." },
+        "from": { "type": "string", "required": true, "description": "Your Twilio phone number to send from." },
+        "body": { "type": "string", "required": true, "description": "The exact message text sent to every recipient in the batch." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "draft_and_send_sms",
+      "name": "draft_and_send_sms",
+      "description": "Renders a template + variables into the exact final message text, shows that literal text for review, then sends. The airlock preview shows the real words, not just 'a message will be sent'. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "to": { "type": "string", "required": true, "description": "Recipient phone number. Must be a verified caller ID on trial accounts." },
+        "from": { "type": "string", "required": true, "description": "Your Twilio phone number to send from." },
+        "template": { "type": "string", "required": true, "description": "Message template using {{variable}} placeholders, e.g. 'Hi {{name}}, your order {{order_id}} shipped!'" },
+        "variables": { "type": "object", "required": false, "description": "Object of {name: value} pairs to fill into the template." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "release_phone_number",
+      "name": "release_phone_number",
+      "description": "Deprovisions an owned Twilio number so it can never be used again. Irreversible: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "twilio",
+      "input_schema": {
+        "phone_number_sid": { "type": "string", "required": true, "description": "The phone number's SID (PN...), not the number itself." }
+      },
+      "side_effects": "external"
+    }
+  ],
+  "license_required": false
+}

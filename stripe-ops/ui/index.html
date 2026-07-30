@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>stripe-ops · control panel</title>
+<style>
+  :root{
+    --bg:#f1f2fb; --dot:#dcddf0; --panel:#ffffff; --panel2:#f8f8fd; --border:#e4e4f2;
+    --text:#14141f; --text2:#43465c; --muted:#888ea3;
+    --violet:#5b4fe8; --violet-dark:#4a3fd1; --violet-light:#eef0ff;
+    --green:#1f9d6c; --green-light:#e7f8f0;
+    --red:#d4453f; --red-light:#fdecec;
+    --amber:#b8860f; --amber-light:#fbf1de;
+    --blue:#3a6df0; --blue-light:#eaf0ff;
+    --mono:"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    background-color:var(--bg);
+    background-image:radial-gradient(var(--dot) 1px, transparent 1px);
+    background-size:22px 22px;
+    min-height:100vh;
+  }
+
+  .shell{max-width:1180px;margin:0 auto;padding:28px 24px 60px}
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    padding:14px 20px; box-shadow:0 1px 2px rgba(20,20,40,.04), 0 10px 24px -16px rgba(20,20,40,.12);
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo-mark{
+    width:28px;height:28px;border-radius:8px;background:var(--violet);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;
+    box-shadow:0 4px 10px -4px rgba(91,79,232,.6);
+  }
+  .brand h1{font-size:16px;font-weight:750;margin:0;letter-spacing:-.01em}
+
+  #status{
+    display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted);
+    padding:6px 12px; border:1px solid var(--border); border-radius:999px; background:var(--panel2);
+    font-family:var(--mono);
+  }
+  #status .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+  #status.ok .dot{background:var(--green)} #status.bad .dot{background:var(--red)}
+
+  .layout{display:flex; gap:20px; margin-top:20px; align-items:flex-start}
+
+  nav{
+    width:260px; flex-shrink:0;
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    box-shadow:0 1px 2px rgba(20,20,40,.04), 0 10px 24px -16px rgba(20,20,40,.10);
+    overflow-y:auto; padding:14px 0;
+    position:sticky; top:28px; max-height:calc(100vh - 56px);
+  }
+  .nav-group-title{
+    font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
+    font-weight:700; padding:6px 18px; margin-top:8px;
+  }
+  .nav-group-title::before{content:"— ";color:var(--violet)}
+  .nav-item{
+    display:flex; align-items:center; gap:9px; padding:9px 18px; cursor:pointer;
+    font-size:13px; color:var(--text2); border-left:3px solid transparent;
+  }
+  .nav-item:hover{background:var(--violet-light)}
+  .nav-item.active{background:var(--violet-light); border-left-color:var(--violet); color:var(--text)}
+  .nav-item.active .id{color:var(--violet-dark);font-weight:650}
+  .nav-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .nav-dot.read{background:var(--green)}
+  .nav-dot.high{background:var(--red)}
+  .nav-dot.medium{background:var(--amber)}
+  .nav-item .id{font-weight:500}
+  .nav-sep{height:1px;background:var(--border);margin:12px 18px}
+
+  main{
+    flex:1; min-width:0;
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    box-shadow:0 1px 2px rgba(20,20,40,.04), 0 10px 24px -16px rgba(20,20,40,.10);
+    padding:30px 36px; min-height:420px;
+  }
+  .placeholder{color:var(--muted); font-size:13.5px; max-width:480px}
+
+  .detail-head{display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .detail-head h2{margin:0; font-size:21px; font-weight:750; letter-spacing:-.01em; font-family:var(--mono)}
+  .badge{display:inline-block;font-size:10.5px;padding:4px 10px;border-radius:999px;font-weight:650;letter-spacing:.03em}
+  .badge.read{background:var(--green-light);color:var(--green)}
+  .badge.write{background:var(--amber-light);color:var(--amber)}
+  .desc{color:var(--text2); font-size:13.5px; line-height:1.6; max-width:600px; margin:0 0 22px}
+
+  .form{max-width:440px}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600}
+  .field input{
+    width:100%; background:var(--panel2); border:1px solid var(--border); border-radius:10px;
+    color:var(--text); padding:10px 12px; font-size:13.5px; font-family:var(--mono);
+  }
+  .field input:focus{outline:none;border-color:var(--violet);background:#fff;box-shadow:0 0 0 3px var(--violet-light)}
+  .btnrow{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
+  button{
+    border:none; border-radius:10px; padding:10px 16px; font-size:13px; font-weight:650;
+    cursor:pointer; transition:all .15s; font-family:inherit;
+  }
+  button:disabled{opacity:.35;cursor:not-allowed}
+  .btn-primary{background:var(--violet);color:#fff;box-shadow:0 4px 10px -4px rgba(91,79,232,.5)}
+  .btn-primary:not(:disabled):hover{background:var(--violet-dark)}
+  .btn-secondary{background:#fff;color:var(--text2);border:1px solid var(--border)}
+  .btn-secondary:not(:disabled):hover{background:var(--violet-light);border-color:var(--violet)}
+
+  .steps{max-width:920px;margin-top:20px;display:flex;flex-direction:column;gap:10px}
+  .step{padding:14px 16px;border-radius:12px;font-size:13px;border:1px solid var(--border);background:var(--panel2)}
+  .step.pending{border-color:#e9d9ad;background:var(--amber-light)}
+  .step.ok{border-color:#bfe6d3;background:var(--green-light)}
+  .step.err{border-color:#f3c6c3;background:var(--red-light)}
+  .step-status{font-weight:700;font-size:14px;margin-bottom:2px;color:var(--text)}
+  .step-note{color:#9c2b26;font-size:12.5px;margin:6px 0;padding:8px 10px;background:#fff;border:1px solid #f3c6c3;border-radius:8px}
+
+  .sub-title{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;font-weight:700}
+  .kv{display:flex;flex-direction:column;gap:5px}
+  .kv-row{display:flex;justify-content:space-between;gap:14px;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--border)}
+  .kv-row:last-child{border-bottom:none}
+  .kv-k{color:var(--muted)}
+  .kv-v{font-weight:600;text-align:right;word-break:break-word;font-family:var(--mono);font-size:12.5px;color:var(--text)}
+
+  .table-scroll{overflow-x:auto;max-width:100%}
+  .mini-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:2px}
+  .mini-table th{text-align:left;color:var(--muted);font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .mini-table td{padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;font-family:var(--mono);font-size:12px}
+
+  .json-toggle{color:var(--violet);font-size:11.5px;cursor:pointer;margin-top:12px;display:inline-block;text-decoration:underline;text-underline-offset:2px;font-weight:600}
+  .json-toggle:hover{color:var(--violet-dark)}
+  .raw-json{margin-top:8px;background:#fbfbff;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:320px;overflow:auto;font-family:var(--mono);color:var(--text2)}
+  .btn-copy{margin-top:8px;font-size:11.5px;padding:6px 10px}
+
+  .activity{max-width:700px}
+  .receipt-row{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:11px 15px;font-size:13px;
+    margin-bottom:8px;
+  }
+  .receipt-row .cmd{font-weight:650;font-family:var(--mono)}
+  .receipt-row .ts{color:var(--muted);font-size:11px;font-family:var(--mono)}
+  .st{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600}
+  .st.executed{background:var(--green-light);color:var(--green)}
+  .st.approved_not_executed{background:var(--blue-light);color:var(--blue)}
+  .st.pending_approval{background:var(--amber-light);color:var(--amber)}
+  .st.failed_safely,.st.failed_with_receipt{background:var(--red-light);color:var(--red)}
+  .st.blocked_by_policy{background:var(--red-light);color:var(--red)}
+  .empty{color:var(--muted);font-size:13px;padding:12px 0}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo-mark">S</div>
+      <h1>Stripe Ops</h1>
+    </div>
+    <div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+  </div>
+
+  <div class="layout">
+    <nav id="nav"></nav>
+    <main id="main">
+      <div class="placeholder">Pick an action on the left to get started.</div>
+    </main>
+  </div>
+</div>
+
+<script>
+const $ = (sel, el=document) => el.querySelector(sel);
+const el = (tag, attrs={}, children=[]) => {
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) e.append(c);
+  return e;
+};
+
+let ALL_COMMANDS = [];
+
+async function api(path, opts={}) {
+  const res = await fetch(path, {
+    method: opts.method || 'GET',
+    headers: opts.body ? {'Content-Type':'application/json'} : {},
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  return res.json();
+}
+
+function fieldsFor(cmd) { return Object.entries(cmd.input_schema || {}); }
+
+function readInputs(root, cmd) {
+  const inputs = {};
+  for (const [name, spec] of fieldsFor(cmd)) {
+    const input = $(`[data-field="${name}"]`, root);
+    const raw = input.value.trim();
+    if (!raw) continue;
+    if (spec.type === 'number') inputs[name] = Number(raw);
+    else if (spec.type === 'array') inputs[name] = raw.split(',').map(s => s.trim()).filter(Boolean);
+    else inputs[name] = raw;
+  }
+  return inputs;
+}
+
+// ---------- friendly formatting helpers ----------
+
+const STATUS_LABELS = {
+  executed:               {text:'✅ Success',                    cls:'ok'},
+  pending_approval:       {text:'⏳ Waiting for your approval',  cls:'pending'},
+  approved_not_executed:  {text:'☑️ Approved — not run yet',     cls:'pending'},
+  failed_safely:          {text:'❌ Failed',                     cls:'err'},
+  failed_with_receipt:    {text:'❌ Failed',                     cls:'err'},
+  blocked_by_policy:      {text:'🚫 Blocked',                    cls:'err'},
+};
+
+function friendlyLabel(key) {
+  return key.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function friendlyValue(key, value, siblingCurrency) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if ((key === 'amount' || key.endsWith('_cents') || key === 'balance') && typeof value === 'number') {
+    const amt = (value / 100).toFixed(2);
+    return siblingCurrency ? `${amt} ${String(siblingCurrency).toUpperCase()}` : amt;
+  }
+  if ((key === 'created' || key.endsWith('_at')) && typeof value === 'number' && value > 1000000000) {
+    return new Date(value * 1000).toLocaleString();
+  }
+  return String(value);
+}
+
+function renderKV(obj) {
+  const wrap = el('div', {class:'kv'});
+  const currency = obj.currency;
+  for (const [k, v] of Object.entries(obj)) {
+    if (Array.isArray(v) || (v && typeof v === 'object')) continue;
+    wrap.append(el('div', {class:'kv-row'}, [
+      el('span', {class:'kv-k'}, friendlyLabel(k)),
+      el('span', {class:'kv-v'}, friendlyValue(k, v, currency)),
+    ]));
+  }
+  return wrap;
+}
+
+function renderTable(rows) {
+  if (!rows.length) return el('div', {class:'empty'}, 'None');
+  const cols = Object.keys(rows[0]);
+  const table = el('table', {class:'mini-table'});
+  table.append(el('thead', {}, [el('tr', {}, cols.map(c => el('th', {}, friendlyLabel(c))))]));
+  const tbody = el('tbody');
+  for (const row of rows) {
+    const currency = row.currency;
+    tbody.append(el('tr', {}, cols.map(c => el('td', {}, friendlyValue(c, row[c], currency)))));
+  }
+  table.append(tbody);
+  return el('div', {class:'table-scroll'}, [table]);
+}
+
+function renderOutputBlock(output) {
+  const wrap = el('div');
+  if (output === null || output === undefined) {
+    wrap.append(el('div', {class:'empty'}, 'No data returned.'));
+    return wrap;
+  }
+  if (typeof output !== 'object') {
+    wrap.append(el('div', {}, String(output)));
+    return wrap;
+  }
+  wrap.append(renderKV(output));
+  for (const [k, v] of Object.entries(output)) {
+    if (Array.isArray(v)) {
+      wrap.append(el('div', {class:'sub-title'}, friendlyLabel(k) + ` (${v.length})`));
+      wrap.append(v.length && typeof v[0] === 'object' ? renderTable(v) : el('div', {}, v.join(', ') || 'None'));
+    }
+  }
+  return wrap;
+}
+
+function addJsonToggle(block, rawObj) {
+  const toggle = el('div', {class:'json-toggle'}, 'View raw JSON');
+  const pre = el('pre', {class:'raw-json'}, JSON.stringify(rawObj, null, 2));
+  pre.style.display = 'none';
+  const copyBtn = el('button', {class:'btn-secondary btn-copy'}, 'Copy JSON');
+  copyBtn.style.display = 'none';
+  toggle.addEventListener('click', () => {
+    const show = pre.style.display === 'none';
+    pre.style.display = show ? 'block' : 'none';
+    copyBtn.style.display = show ? 'inline-block' : 'none';
+    toggle.textContent = show ? 'Hide raw JSON' : 'View raw JSON';
+  });
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(JSON.stringify(rawObj, null, 2));
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => { copyBtn.textContent = 'Copy JSON'; }, 1200);
+  });
+  block.append(toggle, pre, copyBtn);
+}
+
+function getOrCreateStepBlock(container, label) {
+  let block = $(`[data-step="${CSS.escape(label)}"]`, container);
+  if (!block) {
+    block = el('div', {class:'step', 'data-step':label});
+    container.append(block);
+  }
+  block.innerHTML = '';
+  return block;
+}
+
+// A "receipt-shaped" result: has result_status, output, note, etc. (used for Approve + Execute)
+function renderReceiptStep(container, label, receipt) {
+  const block = getOrCreateStepBlock(container, label);
+  const info = STATUS_LABELS[receipt.result_status] || {text: receipt.result_status || 'Unknown', cls:'pending'};
+  block.className = 'step ' + info.cls;
+  block.append(el('div', {class:'step-status'}, info.text));
+  if (receipt.note) block.append(el('div', {class:'step-note'}, receipt.note));
+  if (receipt.output) block.append(renderOutputBlock(receipt.output));
+  addJsonToggle(block, receipt);
+}
+
+// The Preview step returns a "card" shaped object: payload (what will happen), approval_requirement, etc.
+function renderPreviewStep(container, label, card) {
+  const block = getOrCreateStepBlock(container, label);
+  block.className = 'step pending';
+  const needsApproval = card.approval_requirement === 'required';
+  block.append(el('div', {class:'step-status'}, needsApproval ? '👀 Review this before approving' : 'Ready to run'));
+  block.append(el('div', {class:'sub-title'}, 'What will happen'));
+  block.append(renderKV(card.payload || {}));
+  addJsonToggle(block, card);
+}
+
+function renderErrorStep(container, label, err) {
+  const block = getOrCreateStepBlock(container, label);
+  block.className = 'step err';
+  block.append(el('div', {class:'step-status'}, '❌ Failed'));
+  block.append(el('div', {class:'step-note'}, err.error || 'Something went wrong.'));
+  addJsonToggle(block, err);
+}
+
+function renderPendingStep(container, label) {
+  const block = getOrCreateStepBlock(container, label);
+  block.className = 'step pending';
+  block.append(el('div', {class:'step-status'}, 'Working…'));
+}
+
+// ---------- action detail (right-hand pane) ----------
+
+function renderDetail(cmd) {
+  const main = $('#main');
+  main.innerHTML = '';
+  const isWrite = cmd.mode === 'write_requires_approval';
+
+  main.append(
+    el('div', {class:'detail-head'}, [
+      el('h2', {}, cmd.id),
+      el('span', {class:'badge ' + (isWrite ? 'write' : 'read')}, isWrite ? `write · ${cmd.risk || '?'} risk` : 'read-only'),
+    ]),
+    el('p', {class:'desc'}, cmd.description || ''),
+  );
+
+  const form = el('div', {class:'form'});
+  for (const [name, spec] of fieldsFor(cmd)) {
+    const hint = spec.type === 'array'
+      ? (spec.description || '') + ' (comma-separated, e.g. ch_abc, ch_def)'
+      : (spec.description || '');
+    form.append(el('div', {class:'field'}, [
+      el('label', {}, name + (spec.required ? ' *' : '')),
+      el('input', {'data-field':name, placeholder: hint}),
+    ]));
+  }
+  main.append(form);
+  const stepsWrap = el('div', {class:'steps'});
+
+  if (!isWrite) {
+    const runBtn = el('button', {class:'btn-primary'}, 'Run');
+    runBtn.addEventListener('click', async () => {
+      runBtn.disabled = true;
+      renderPendingStep(stepsWrap, 'Result');
+      const inputs = readInputs(form, cmd);
+      const r = await api('/api/execute', {method:'POST', body:{command_id:cmd.id, inputs, intent:'control panel'}});
+      if (r.ok && r.receipt) renderReceiptStep(stepsWrap, 'Result', r.receipt);
+      else renderErrorStep(stepsWrap, 'Result', r);
+      runBtn.disabled = false;
+      loadActivity();
+    });
+    main.append(el('div', {class:'btnrow'}, [runBtn]), stepsWrap);
+    return;
+  }
+
+  let lastPayload = null;
+  const previewBtn = el('button', {class:'btn-secondary'}, '1. Preview');
+  const approveBtn = el('button', {class:'btn-secondary', disabled:'disabled'}, '2. Approve');
+  const executeBtn = el('button', {class:'btn-primary', disabled:'disabled'}, '3. Execute');
+
+  previewBtn.addEventListener('click', async () => {
+    approveBtn.disabled = true; executeBtn.disabled = true;
+    lastPayload = readInputs(form, cmd);
+    renderPendingStep(stepsWrap, '1. Preview');
+    const r = await api('/api/preview', {method:'POST', body:{command_id:cmd.id, inputs:lastPayload, intent:'control panel'}});
+    if (r.ok && r.card) { renderPreviewStep(stepsWrap, '1. Preview', r.card); approveBtn.disabled = false; }
+    else renderErrorStep(stepsWrap, '1. Preview', r);
+  });
+  approveBtn.addEventListener('click', async () => {
+    executeBtn.disabled = true;
+    renderPendingStep(stepsWrap, '2. Approve');
+    const r = await api('/api/approve', {method:'POST', body:{command_id:cmd.id, inputs:lastPayload, method:'ui_click', intent:'control panel'}});
+    if (r.ok && r.receipt) { renderReceiptStep(stepsWrap, '2. Approve', r.receipt); executeBtn.disabled = false; }
+    else renderErrorStep(stepsWrap, '2. Approve', r);
+  });
+  executeBtn.addEventListener('click', async () => {
+    renderPendingStep(stepsWrap, '3. Execute');
+    const r = await api('/api/execute', {method:'POST', body:{command_id:cmd.id, inputs:lastPayload, intent:'control panel'}});
+    if (r.ok && r.receipt) renderReceiptStep(stepsWrap, '3. Execute', r.receipt);
+    else renderErrorStep(stepsWrap, '3. Execute', r);
+    approveBtn.disabled = true; executeBtn.disabled = true;
+    loadActivity();
+  });
+
+  main.append(el('div', {class:'btnrow'}, [previewBtn, approveBtn, executeBtn]), stepsWrap);
+}
+
+// ---------- activity pane ----------
+
+async function renderActivity() {
+  const main = $('#main');
+  main.innerHTML = '';
+  main.append(el('div', {class:'detail-head'}, [el('h2', {}, 'Recent activity')]));
+  const wrap = el('div', {class:'activity'});
+  main.append(wrap);
+  await loadActivity(wrap);
+}
+
+async function loadActivity(wrap) {
+  wrap = wrap || $('.activity');
+  if (!wrap) return;
+  const r = await api('/api/receipts');
+  const list = r.receipts || [];
+  wrap.innerHTML = '';
+  if (!list.length) { wrap.innerHTML = '<div class="empty">No receipts yet — run something first.</div>'; return; }
+  for (const rc of list) {
+    wrap.append(el('div', {class:'receipt-row'}, [
+      el('div', {}, [
+        el('div', {class:'cmd'}, rc.command_id),
+        el('div', {class:'ts'}, rc.timestamp || ''),
+      ]),
+      el('span', {class:'st ' + (rc.result_status||'')}, (rc.result_status||'').replace(/_/g,' ')),
+    ]));
+  }
+}
+
+// ---------- nav ----------
+
+function selectNavItem(id) {
+  for (const item of document.querySelectorAll('.nav-item')) {
+    item.classList.toggle('active', item.dataset.id === id);
+  }
+  if (id === '__activity__') { renderActivity(); return; }
+  const cmd = ALL_COMMANDS.find(c => c.id === id);
+  if (cmd) renderDetail(cmd);
+}
+
+function buildNav() {
+  const nav = $('#nav');
+  nav.innerHTML = '';
+  const reads = ALL_COMMANDS.filter(c => c.mode !== 'write_requires_approval');
+  const writes = ALL_COMMANDS.filter(c => c.mode === 'write_requires_approval');
+
+  nav.append(el('div', {class:'nav-group-title'}, 'Reads'));
+  for (const c of reads) {
+    nav.append(el('div', {class:'nav-item', 'data-id':c.id, onclick:()=>selectNavItem(c.id)}, [
+      el('span', {class:'nav-dot read'}),
+      el('span', {class:'id'}, c.id),
+    ]));
+  }
+  nav.append(el('div', {class:'nav-group-title'}, 'Writes'));
+  for (const c of writes) {
+    nav.append(el('div', {class:'nav-item', 'data-id':c.id, onclick:()=>selectNavItem(c.id)}, [
+      el('span', {class:'nav-dot ' + (c.risk === 'high' ? 'high' : 'medium')}),
+      el('span', {class:'id'}, c.id),
+    ]));
+  }
+  nav.append(el('div', {class:'nav-sep'}));
+  nav.append(el('div', {class:'nav-item', 'data-id':'__activity__', onclick:()=>selectNavItem('__activity__')}, [
+    el('span', {class:'id'}, '📋 Recent activity'),
+  ]));
+}
+
+async function loadCommands() {
+  const r = await api('/api/commands');
+  const statusEl = $('#status'); const statusText = $('#status-text');
+  if (!r.server_reachable) {
+    statusEl.className = 'bad'; statusText.textContent = 'RailCall Studio not reachable on :8799';
+    return;
+  }
+  statusEl.className = 'ok'; statusText.textContent = 'connected';
+  ALL_COMMANDS = r.commands || [];
+  buildNav();
+  if (ALL_COMMANDS.length) selectNavItem(ALL_COMMANDS[0].id);
+}
+
+loadCommands();
+</script>
+</body>
+</html>

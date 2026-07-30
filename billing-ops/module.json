@@ -1,0 +1,56 @@
+{
+  "id": "billing-ops",
+  "slug": "abbassi-ahmed/billing-ops",
+  "publisher_pubkey": "9abc7c335eb5dd531227be9797f429fd40b4069ad25698e74529957f1f740b02",
+  "version": "0.1.0",
+  "description": "Cross-provider billing-reminder composite: looks up a real Stripe invoice and sends its exact amount, due date, and payment link as an SMS via Twilio -- one Stripe call + one Twilio call behind a single airlock approval. Depends on stripe-ops and twilio-ops sharing the same RailCall server. Read-only lookups (which invoices need a nudge, what the message will actually say) run instantly. contest:2026Q3",
+  "auth": {
+    "type": "multi_provider",
+    "env_vars": ["STRIPE_SECRET_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"]
+  },
+  "commands": [
+    {
+      "id": "list_invoices_needing_reminder",
+      "name": "list_invoices_needing_reminder",
+      "description": "List open (unpaid, finalized) Stripe invoices that are due within N days or already overdue, most-overdue first. This is also the way to enumerate unpaid invoices for ANY analysis -- e.g. which customer owes the most, total outstanding, who's overdue -- by passing a large within_days (like 3650) to capture everything open. Each row includes customer_id, customer_name, amount_due (in cents), and due_date. Invoices with no due date are excluded.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "within_days": { "type": "number", "required": false, "description": "Include invoices due within this many days from now. Already-overdue invoices are always included regardless of this value. Defaults to 7." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "preview_invoice_reminder",
+      "name": "preview_invoice_reminder",
+      "description": "Fetch one Stripe invoice and render the exact SMS text send_invoice_reminder_sms would send -- the real amount, due date, and payment link, in the literal wording. Sends nothing. RailCall's own airlock preview only echoes back your typed inputs, not fetched data, so this command exists to let you actually see the message before you approve sending it.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "invoice_id": { "type": "string", "required": true, "description": "Stripe invoice ID (in_...)." },
+        "to": { "type": "string", "required": true, "description": "The phone number this would be sent to (E.164). Included in the preview output only -- nothing is sent by this command." },
+        "custom_note": { "type": "string", "required": false, "description": "Extra sentence appended to the reminder text." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "send_invoice_reminder_sms",
+      "name": "send_invoice_reminder_sms",
+      "description": "Composite, two providers, one approval: looks up the real Stripe invoice (amount due, due date, hosted payment link), renders the reminder text, and sends it via Twilio SMS. Run preview_invoice_reminder first to see the exact words this will send. Money-relevant and compliance-relevant: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe+twilio",
+      "input_schema": {
+        "invoice_id": { "type": "string", "required": true, "description": "Stripe invoice ID (in_...)." },
+        "to": { "type": "string", "required": true, "description": "Recipient phone number (E.164). Must be a verified caller ID on trial Twilio accounts." },
+        "from": { "type": "string", "required": true, "description": "Your Twilio phone number to send from." },
+        "custom_note": { "type": "string", "required": false, "description": "Extra sentence appended to the reminder text." }
+      },
+      "side_effects": "external"
+    }
+  ],
+  "license_required": false
+}

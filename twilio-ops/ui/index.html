@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>twilio-ops · control panel</title>
+<style>
+  :root{
+    color-scheme: light only;
+    --bg:#f4f4f6; --panel:#ffffff; --panel2:#fafafb; --border:#e1e3ea; --border-soft:#ebecf1;
+    --ink:#121c2d; --ink2:#4b5565; --muted:#8891a5;
+    --red:#f22f46; --red-dark:#cf1836; --red-light:#fde9eb;
+    --green:#048848; --green-light:#e1f5e9;
+    --amber:#a35200; --amber-light:#fff1de;
+    --blue:#0263e0; --blue-light:#e3edfc;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%; background:var(--bg)}
+  body{
+    margin:0; color:var(--ink); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+
+  .shell{max-width:1180px;margin:0 auto;padding:24px 24px 60px}
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:14px 20px; box-shadow:0 1px 2px rgba(18,28,45,.04);
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo-mark{
+    width:26px;height:26px; display:grid; grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(2,1fr);
+    gap:3px; padding:2px;
+  }
+  .logo-mark span{border-radius:50%; background:var(--red)}
+  .brand-text{display:flex; flex-direction:column; line-height:1.15}
+  .brand h1{font-size:16px;font-weight:800;margin:0;letter-spacing:-.01em;color:var(--ink)}
+  .brand .sub{font-size:11px;color:var(--muted);font-family:var(--mono)}
+
+  #status{
+    display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:var(--ink2);
+    padding:6px 12px; border:1px solid var(--border); border-radius:999px; background:var(--panel2);
+    font-family:var(--mono);
+  }
+  #status .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+  #status.ok .dot{background:var(--green)} #status.bad .dot{background:var(--red)}
+
+  .layout{display:flex; gap:18px; margin-top:18px; align-items:flex-start}
+
+  nav{
+    width:250px; flex-shrink:0;
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 1px 2px rgba(18,28,45,.04);
+    overflow-y:auto; padding:12px 0;
+    position:sticky; top:24px; max-height:calc(100vh - 48px);
+  }
+  .nav-group-title{
+    font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+    font-weight:700; padding:8px 18px 6px;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:9px; padding:9px 18px; cursor:pointer;
+    font-size:13px; color:var(--ink2); border-left:3px solid transparent;
+  }
+  .nav-item:hover{background:var(--panel2)}
+  .nav-item.active{background:var(--red-light); border-left-color:var(--red); color:var(--ink)}
+  .nav-item.active .id{color:var(--red-dark);font-weight:650}
+  .nav-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .nav-dot.read{background:var(--blue)}
+  .nav-dot.high{background:var(--red)}
+  .nav-dot.medium{background:var(--amber)}
+  .nav-item .id{font-weight:500; font-family:var(--mono); font-size:12.5px}
+  .nav-sep{height:1px;background:var(--border);margin:10px 18px}
+  .nav-item.activity-link{font-family:var(--sans); font-weight:600; color:var(--ink2)}
+
+  main{
+    flex:1; min-width:0;
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 1px 2px rgba(18,28,45,.04);
+    padding:28px 34px; min-height:420px;
+  }
+  .placeholder{color:var(--muted); font-size:13.5px; max-width:480px}
+
+  .detail-head{display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap}
+  .detail-head h2{margin:0; font-size:20px; font-weight:750; letter-spacing:-.01em; font-family:var(--mono); color:var(--ink)}
+  .badge{display:inline-block;font-size:10.5px;padding:4px 10px;border-radius:999px;font-weight:650;letter-spacing:.02em}
+  .badge.read{background:var(--blue-light);color:var(--blue)}
+  .badge.write{background:var(--amber-light);color:var(--amber)}
+  .desc{color:var(--ink2); font-size:13.5px; line-height:1.6; max-width:600px; margin:0 0 22px}
+
+  .form{max-width:440px}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600}
+  .field input{
+    width:100%; background:var(--panel2); border:1px solid var(--border); border-radius:8px;
+    color:var(--ink); padding:10px 12px; font-size:13.5px; font-family:var(--mono);
+  }
+  .field input:focus{outline:none;border-color:var(--red);background:#fff;box-shadow:0 0 0 3px var(--red-light)}
+  .btnrow{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
+  button{
+    border:none; border-radius:8px; padding:10px 16px; font-size:13px; font-weight:650;
+    cursor:pointer; transition:background .15s,border-color .15s; font-family:inherit;
+  }
+  button:disabled{opacity:.35;cursor:not-allowed}
+  .btn-primary{background:var(--red);color:#fff}
+  .btn-primary:not(:disabled):hover{background:var(--red-dark)}
+  .btn-secondary{background:#fff;color:var(--ink2);border:1px solid var(--border)}
+  .btn-secondary:not(:disabled):hover{background:var(--panel2);border-color:var(--muted)}
+
+  /* step flow -- modeled on a call/message path moving through checkpoints */
+  .steps{position:relative;max-width:920px;margin-top:22px;padding-left:30px}
+  .steps:empty::before{content:none}
+  .steps::before{content:'';position:absolute;left:10px;top:6px;bottom:6px;width:2px;background:var(--border)}
+  .step{position:relative;padding:14px 16px;border-radius:10px;font-size:13px;border:1px solid var(--border);background:var(--panel2);margin-bottom:10px}
+  .step:last-child{margin-bottom:0}
+  .step::before{content:'';position:absolute;left:-26px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--muted);border:2px solid var(--panel)}
+  .step.pending{border-color:#ecd3b1;background:var(--amber-light)}
+  .step.pending::before{background:var(--amber)}
+  .step.ok{border-color:#b7ddc6;background:var(--green-light)}
+  .step.ok::before{background:var(--green)}
+  .step.err{border-color:#f0bcc1;background:var(--red-light)}
+  .step.err::before{background:var(--red)}
+  .step-status{font-weight:700;font-size:14px;margin-bottom:2px;color:var(--ink)}
+  .step-note{color:#9c2b26;font-size:12.5px;margin:6px 0;padding:8px 10px;background:#fff;border:1px solid #f0bcc1;border-radius:8px}
+
+  .sub-title{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;font-weight:700}
+  .kv{display:flex;flex-direction:column;gap:5px}
+  .kv-row{display:flex;justify-content:space-between;gap:14px;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--border)}
+  .kv-row:last-child{border-bottom:none}
+  .kv-k{color:var(--muted)}
+  .kv-v{font-weight:600;text-align:right;word-break:break-word;font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+
+  .table-scroll{overflow-x:auto;max-width:100%}
+  .mini-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:2px}
+  .mini-table th{text-align:left;color:var(--muted);font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border);font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  .mini-table td{padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;font-family:var(--mono);font-size:12px}
+
+  .json-toggle{color:var(--red);font-size:11.5px;cursor:pointer;margin-top:12px;display:inline-block;text-decoration:underline;text-underline-offset:2px;font-weight:600}
+  .json-toggle:hover{color:var(--red-dark)}
+  .raw-json{margin-top:8px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:320px;overflow:auto;font-family:var(--mono);color:var(--ink2)}
+  .btn-copy{margin-top:8px;font-size:11.5px;padding:6px 10px}
+
+  .activity{max-width:700px}
+  .receipt-row{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:11px 15px;font-size:13px;
+    margin-bottom:8px;
+  }
+  .receipt-row .cmd{font-weight:650;font-family:var(--mono)}
+  .receipt-row .ts{color:var(--muted);font-size:11px;font-family:var(--mono)}
+  .st{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600}
+  .st.executed{background:var(--green-light);color:var(--green)}
+  .st.approved_not_executed{background:var(--blue-light);color:var(--blue)}
+  .st.pending_approval{background:var(--amber-light);color:var(--amber)}
+  .st.failed_safely,.st.failed_with_receipt{background:var(--red-light);color:var(--red)}
+  .st.blocked_by_policy{background:var(--red-light);color:var(--red)}
+  .empty{color:var(--muted);font-size:13px;padding:12px 0}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo-mark"><span></span><span></span><span></span><span></span></div>
+      <div class="brand-text">
+        <h1>Twilio Ops</h1>
+        <span class="sub">SMS &amp; voice control panel</span>
+      </div>
+    </div>
+    <div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+  </div>
+
+  <div class="layout">
+    <nav id="nav"></nav>
+    <main id="main">
+      <div class="placeholder">Pick an action on the left to get started.</div>
+    </main>
+  </div>
+</div>
+
+<script>
+const $ = (sel, el=document) => el.querySelector(sel);
+const el = (tag, attrs={}, children=[]) => {
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) e.append(c);
+  return e;
+};
+
+let ALL_COMMANDS = [];
+
+async function api(path, opts={}) {
+  const res = await fetch(path, {
+    method: opts.method || 'GET',
+    headers: opts.body ? {'Content-Type':'application/json'} : {},
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  return res.json();
+}
+
+function fieldsFor(cmd) { return Object.entries(cmd.input_schema || {}); }
+
+function readInputs(root, cmd) {
+  const inputs = {};
+  for (const [name, spec] of fieldsFor(cmd)) {
+    const input = $(`[data-field="${name}"]`, root);
+    const raw = input.value.trim();
+    if (!raw) continue;
+    if (spec.type === 'number') inputs[name] = Number(raw);
+    else if (spec.type === 'array') inputs[name] = raw.split(',').map(s => s.trim()).filter(Boolean);
+    else inputs[name] = raw;
+  }
+  return inputs;
+}
+
+// ---------- friendly formatting helpers ----------
+
+const STATUS_LABELS = {
+  executed:               {text:'Sent',                        cls:'ok'},
+  pending_approval:       {text:'Waiting for your approval',   cls:'pending'},
+  approved_not_executed:  {text:'Approved — not run yet',      cls:'pending'},
+  failed_safely:          {text:'Failed',                      cls:'err'},
+  failed_with_receipt:    {text:'Failed',                      cls:'err'},
+  blocked_by_policy:      {text:'Blocked',                     cls:'err'},
+};
+
+function friendlyLabel(key) {
+  return key.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function friendlyValue(key, value, siblingCurrency) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if ((key === 'amount' || key.endsWith('_cents') || key === 'balance') && typeof value === 'number') {
+    const amt = (value / 100).toFixed(2);
+    return siblingCurrency ? `${amt} ${String(siblingCurrency).toUpperCase()}` : amt;
+  }
+  if ((key === 'created' || key.endsWith('_at') || key.startsWith('date_')) && typeof value === 'number' && value > 1000000000) {
+    return new Date(value * 1000).toLocaleString();
+  }
+  return String(value);
+}
+
+function renderKV(obj) {
+  const wrap = el('div', {class:'kv'});
+  const currency = obj.currency;
+  for (const [k, v] of Object.entries(obj)) {
+    if (Array.isArray(v) || (v && typeof v === 'object')) continue;
+    wrap.append(el('div', {class:'kv-row'}, [
+      el('span', {class:'kv-k'}, friendlyLabel(k)),
+      el('span', {class:'kv-v'}, friendlyValue(k, v, currency)),
+    ]));
+  }
+  return wrap;
+}
+
+function renderTable(rows) {
+  if (!rows.length) return el('div', {class:'empty'}, 'None');
+  const cols = Object.keys(rows[0]);
+  const table = el('table', {class:'mini-table'});
+  table.append(el('thead', {}, [el('tr', {}, cols.map(c => el('th', {}, friendlyLabel(c))))]));
+  const tbody = el('tbody');
+  for (const row of rows) {
+    const currency = row.currency;
+    tbody.append(el('tr', {}, cols.map(c => el('td', {}, friendlyValue(c, row[c], currency)))));
+  }
+  table.append(tbody);
+  return el('div', {class:'table-scroll'}, [table]);
+}
+
+function renderOutputBlock(output) {
+  const wrap = el('div');
+  if (output === null || output === undefined) {
+    wrap.append(el('div', {class:'empty'}, 'No data returned.'));
+    return wrap;
+  }
+  if (typeof output !== 'object') {
+    wrap.append(el('div', {}, String(output)));
+    return wrap;
+  }
+  wrap.append(renderKV(output));
+  for (const [k, v] of Object.entries(output)) {
+    if (Array.isArray(v)) {
+      wrap.append(el('div', {class:'sub-title'}, friendlyLabel(k) + ` (${v.length})`));
+      wrap.append(v.length && typeof v[0] === 'object' ? renderTable(v) : el('div', {}, v.join(', ') || 'None'));
+    }
+  }
+  return wrap;
+}
+
+function addJsonToggle(block, rawObj) {
+  const toggle = el('div', {class:'json-toggle'}, 'View raw JSON');
+  const pre = el('pre', {class:'raw-json'}, JSON.stringify(rawObj, null, 2));
+  pre.style.display = 'none';
+  const copyBtn = el('button', {class:'btn-secondary btn-copy'}, 'Copy JSON');
+  copyBtn.style.display = 'none';
+  toggle.addEventListener('click', () => {
+    const show = pre.style.display === 'none';
+    pre.style.display = show ? 'block' : 'none';
+    copyBtn.style.display = show ? 'inline-block' : 'none';
+    toggle.textContent = show ? 'Hide raw JSON' : 'View raw JSON';
+  });
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(JSON.stringify(rawObj, null, 2));
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => { copyBtn.textContent = 'Copy JSON'; }, 1200);
+  });
+  block.append(toggle, pre, copyBtn);
+}
+
+function getOrCreateStepBlock(container, label) {
+  let block = $(`[data-step="${CSS.escape(label)}"]`, container);
+  if (!block) {
+    block = el('div', {class:'step', 'data-step':label});
+    container.append(block);
+  }
+  block.innerHTML = '';
+  return block;
+}
+
+// A "receipt-shaped" result: has result_status, output, note, etc. (used for Approve + Execute)
+function renderReceiptStep(container, label, receipt) {
+  const block = getOrCreateStepBlock(container, label);
+  const info = STATUS_LABELS[receipt.result_status] || {text: receipt.result_status || 'Unknown', cls:'pending'};
+  block.className = 'step ' + info.cls;
+  block.append(el('div', {class:'step-status'}, info.text));
+  if (receipt.note) block.append(el('div', {class:'step-note'}, receipt.note));
+  if (receipt.output) block.append(renderOutputBlock(receipt.output));
+  addJsonToggle(block, receipt);
+}
+
+// The Preview step returns a "card" shaped object: payload (what will happen), approval_requirement, etc.
+function renderPreviewStep(container, label, card) {
+  const block = getOrCreateStepBlock(container, label);
+  block.className = 'step pending';
+  const needsApproval = card.approval_requirement === 'required';
+  block.append(el('div', {class:'step-status'}, needsApproval ? 'Review before approving' : 'Ready to run'));
+  block.append(el('div', {class:'sub-title'}, 'What will happen'));
+  block.append(renderKV(card.payload || {}));
+  addJsonToggle(block, card);
+}
+
+function renderErrorStep(container, label, err) {
+  const block = getOrCreateStepBlock(container, label);
+  block.className = 'step err';
+  block.append(el('div', {class:'step-status'}, 'Failed'));
+  block.append(el('div', {class:'step-note'}, err.error || 'Something went wrong.'));
+  addJsonToggle(block, err);
+}
+
+function renderPendingStep(container, label) {
+  const block = getOrCreateStepBlock(container, label);
+  block.className = 'step pending';
+  block.append(el('div', {class:'step-status'}, 'Working…'));
+}
+
+// ---------- action detail (right-hand pane) ----------
+
+function renderDetail(cmd) {
+  const main = $('#main');
+  main.innerHTML = '';
+  const isWrite = cmd.mode === 'write_requires_approval';
+
+  main.append(
+    el('div', {class:'detail-head'}, [
+      el('h2', {}, cmd.id),
+      el('span', {class:'badge ' + (isWrite ? 'write' : 'read')}, isWrite ? `Needs your approval · ${cmd.risk || '?'} risk` : 'Runs instantly'),
+    ]),
+    el('p', {class:'desc'}, cmd.description || ''),
+  );
+
+  const form = el('div', {class:'form'});
+  for (const [name, spec] of fieldsFor(cmd)) {
+    const hint = spec.type === 'array'
+      ? (spec.description || '') + ' (comma-separated, e.g. +15551234567, +15557654321)'
+      : (spec.description || '');
+    form.append(el('div', {class:'field'}, [
+      el('label', {}, name + (spec.required ? ' *' : '')),
+      el('input', {'data-field':name, placeholder: hint}),
+    ]));
+  }
+  main.append(form);
+  const stepsWrap = el('div', {class:'steps'});
+
+  if (!isWrite) {
+    const runBtn = el('button', {class:'btn-primary'}, 'Run');
+    runBtn.addEventListener('click', async () => {
+      runBtn.disabled = true;
+      renderPendingStep(stepsWrap, 'Result');
+      const inputs = readInputs(form, cmd);
+      const r = await api('/api/execute', {method:'POST', body:{command_id:cmd.id, inputs, intent:'control panel'}});
+      if (r.ok && r.receipt) renderReceiptStep(stepsWrap, 'Result', r.receipt);
+      else renderErrorStep(stepsWrap, 'Result', r);
+      runBtn.disabled = false;
+      loadActivity();
+    });
+    main.append(el('div', {class:'btnrow'}, [runBtn]), stepsWrap);
+    return;
+  }
+
+  let lastPayload = null;
+  const previewBtn = el('button', {class:'btn-secondary'}, '1. Preview');
+  const approveBtn = el('button', {class:'btn-secondary', disabled:'disabled'}, '2. Approve');
+  const executeBtn = el('button', {class:'btn-primary', disabled:'disabled'}, '3. Execute');
+
+  previewBtn.addEventListener('click', async () => {
+    approveBtn.disabled = true; executeBtn.disabled = true;
+    lastPayload = readInputs(form, cmd);
+    renderPendingStep(stepsWrap, '1. Preview');
+    const r = await api('/api/preview', {method:'POST', body:{command_id:cmd.id, inputs:lastPayload, intent:'control panel'}});
+    if (r.ok && r.card) { renderPreviewStep(stepsWrap, '1. Preview', r.card); approveBtn.disabled = false; }
+    else renderErrorStep(stepsWrap, '1. Preview', r);
+  });
+  approveBtn.addEventListener('click', async () => {
+    executeBtn.disabled = true;
+    renderPendingStep(stepsWrap, '2. Approve');
+    const r = await api('/api/approve', {method:'POST', body:{command_id:cmd.id, inputs:lastPayload, method:'ui_click', intent:'control panel'}});
+    if (r.ok && r.receipt) { renderReceiptStep(stepsWrap, '2. Approve', r.receipt); executeBtn.disabled = false; }
+    else renderErrorStep(stepsWrap, '2. Approve', r);
+  });
+  executeBtn.addEventListener('click', async () => {
+    renderPendingStep(stepsWrap, '3. Execute');
+    const r = await api('/api/execute', {method:'POST', body:{command_id:cmd.id, inputs:lastPayload, intent:'control panel'}});
+    if (r.ok && r.receipt) renderReceiptStep(stepsWrap, '3. Execute', r.receipt);
+    else renderErrorStep(stepsWrap, '3. Execute', r);
+    approveBtn.disabled = true; executeBtn.disabled = true;
+    loadActivity();
+  });
+
+  main.append(el('div', {class:'btnrow'}, [previewBtn, approveBtn, executeBtn]), stepsWrap);
+}
+
+// ---------- activity pane ----------
+
+async function renderActivity() {
+  const main = $('#main');
+  main.innerHTML = '';
+  main.append(el('div', {class:'detail-head'}, [el('h2', {}, 'Recent activity')]));
+  const wrap = el('div', {class:'activity'});
+  main.append(wrap);
+  await loadActivity(wrap);
+}
+
+async function loadActivity(wrap) {
+  wrap = wrap || $('.activity');
+  if (!wrap) return;
+  const r = await api('/api/receipts');
+  const list = r.receipts || [];
+  wrap.innerHTML = '';
+  if (!list.length) { wrap.innerHTML = '<div class="empty">No receipts yet — run something first.</div>'; return; }
+  for (const rc of list) {
+    wrap.append(el('div', {class:'receipt-row'}, [
+      el('div', {}, [
+        el('div', {class:'cmd'}, rc.command_id),
+        el('div', {class:'ts'}, rc.timestamp || ''),
+      ]),
+      el('span', {class:'st ' + (rc.result_status||'')}, (rc.result_status||'').replace(/_/g,' ')),
+    ]));
+  }
+}
+
+// ---------- nav ----------
+
+function selectNavItem(id) {
+  for (const item of document.querySelectorAll('.nav-item')) {
+    item.classList.toggle('active', item.dataset.id === id);
+  }
+  if (id === '__activity__') { renderActivity(); return; }
+  const cmd = ALL_COMMANDS.find(c => c.id === id);
+  if (cmd) renderDetail(cmd);
+}
+
+function buildNav() {
+  const nav = $('#nav');
+  nav.innerHTML = '';
+  const reads = ALL_COMMANDS.filter(c => c.mode !== 'write_requires_approval');
+  const writes = ALL_COMMANDS.filter(c => c.mode === 'write_requires_approval');
+
+  nav.append(el('div', {class:'nav-group-title'}, 'Look up'));
+  for (const c of reads) {
+    nav.append(el('div', {class:'nav-item', 'data-id':c.id, onclick:()=>selectNavItem(c.id)}, [
+      el('span', {class:'nav-dot read'}),
+      el('span', {class:'id'}, c.id),
+    ]));
+  }
+  nav.append(el('div', {class:'nav-group-title'}, 'Send &amp; manage'));
+  for (const c of writes) {
+    nav.append(el('div', {class:'nav-item', 'data-id':c.id, onclick:()=>selectNavItem(c.id)}, [
+      el('span', {class:'nav-dot ' + (c.risk === 'high' ? 'high' : 'medium')}),
+      el('span', {class:'id'}, c.id),
+    ]));
+  }
+  nav.append(el('div', {class:'nav-sep'}));
+  nav.append(el('div', {class:'nav-item activity-link', 'data-id':'__activity__', onclick:()=>selectNavItem('__activity__')}, [
+    el('span', {class:'id'}, 'Recent activity'),
+  ]));
+}
+
+async function loadCommands() {
+  const r = await api('/api/commands');
+  const statusEl = $('#status'); const statusText = $('#status-text');
+  if (!r.server_reachable) {
+    statusEl.className = 'bad'; statusText.textContent = 'RailCall Studio not reachable on :8799';
+    return;
+  }
+  statusEl.className = 'ok'; statusText.textContent = 'connected';
+  ALL_COMMANDS = r.commands || [];
+  buildNav();
+  if (ALL_COMMANDS.length) selectNavItem(ALL_COMMANDS[0].id);
+}
+
+loadCommands();
+</script>
+</body>
+</html>

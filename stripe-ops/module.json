@@ -1,0 +1,233 @@
+{
+  "id": "stripe-ops",
+  "slug": "abbassi-ahmed/stripe-ops",
+  "publisher_pubkey": "9abc7c335eb5dd531227be9797f429fd40b4069ad25698e74529957f1f740b02",
+  "version": "0.1.0",
+  "description": "Airlock-gated Stripe operations for support/finance ops: refunds, dispute responses, subscription cancellations, and invoice voids all go through preview -> approve -> execute with a signed receipt. Read-only lookups (charges, customers, disputes) run instantly. contest:2026Q3",
+  "auth": {
+    "type": "api_key",
+    "env_var": "STRIPE_SECRET_KEY"
+  },
+  "commands": [
+    {
+      "id": "list_charges",
+      "name": "list_charges",
+      "description": "List recent charges, optionally filtered by customer.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "customer_id": { "type": "string", "required": false, "description": "Stripe customer ID (cus_...) to filter by. Optional." },
+        "limit": { "type": "number", "required": false, "description": "Max results, 1-100." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "get_customer",
+      "name": "get_customer",
+      "description": "Fetch a single customer's profile and balance.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "customer_id": { "type": "string", "required": true, "description": "Stripe customer ID (cus_...)." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "search_customers",
+      "name": "search_customers",
+      "description": "Find customers by name or email when you don't have their cus_ ID. This is how you turn a person's name (e.g. 'Riley Novak') into their customer ID before looking up their charges or invoices. Returns matching customers with their id, name, and email.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "name": { "type": "string", "required": false, "description": "Customer name to match (exact, case-insensitive)." },
+        "email": { "type": "string", "required": false, "description": "Customer email to match." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "get_payment_intent",
+      "name": "get_payment_intent",
+      "description": "Fetch one PaymentIntent by ID: its status, amount, capture state, and the underlying charge. Use this to verify a pi_... someone gives you (e.g. copied from the Stripe dashboard) before refunding or canceling it.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "payment_intent_id": { "type": "string", "required": true, "description": "PaymentIntent ID (pi_...)." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "list_disputes",
+      "name": "list_disputes",
+      "description": "List open and recent disputes/chargebacks.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "limit": { "type": "number", "required": false, "description": "Max results, 1-100." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "create_refund",
+      "name": "create_refund",
+      "description": "Refund a charge or payment intent, in full or in part. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "charge_id": { "type": "string", "required": false, "description": "Charge ID (ch_...). Provide this OR payment_intent_id." },
+        "payment_intent_id": { "type": "string", "required": false, "description": "PaymentIntent ID (pi_...). Provide this OR charge_id." },
+        "amount_cents": { "type": "number", "required": false, "description": "Partial refund amount in cents. Omit for a full refund." },
+        "reason": { "type": "string", "required": false, "description": "One of: duplicate, fraudulent, requested_by_customer." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "respond_to_dispute",
+      "name": "respond_to_dispute",
+      "description": "Submit evidence on a dispute. Money-relevant (affects dispute outcome): gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "medium",
+      "provider": "stripe",
+      "input_schema": {
+        "dispute_id": { "type": "string", "required": true, "description": "Dispute ID (dp_...)." },
+        "evidence_text": { "type": "string", "required": true, "description": "Uncategorized evidence text explaining the transaction." },
+        "submit": { "required": false, "description": "If true, submit immediately. If false, save evidence as a draft without submitting." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "cancel_subscription",
+      "name": "cancel_subscription",
+      "description": "Cancel a customer's subscription, immediately or at period end. Revenue-affecting: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "subscription_id": { "type": "string", "required": true, "description": "Subscription ID (sub_...)." },
+        "at_period_end": { "required": false, "description": "If true, cancel at the end of the current billing period instead of immediately." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "capture_payment_intent",
+      "name": "capture_payment_intent",
+      "description": "Capture a previously authorized (uncaptured) payment, in full or in part. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "payment_intent_id": { "type": "string", "required": true, "description": "PaymentIntent ID (pi_...)." },
+        "amount_to_capture_cents": { "type": "number", "required": false, "description": "Partial capture amount in cents. Omit to capture the full authorized amount." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "cancel_payment_intent",
+      "name": "cancel_payment_intent",
+      "description": "Cancel an uncaptured PaymentIntent, releasing its authorization so it can never be captured. Use this instead of a refund for a charge that hasn't been captured yet -- Stripe rejects refunds on uncaptured charges. Money-relevant: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "payment_intent_id": { "type": "string", "required": true, "description": "PaymentIntent ID (pi_...)." },
+        "cancellation_reason": { "type": "string", "required": false, "description": "One of: duplicate, fraudulent, requested_by_customer, abandoned." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "void_invoice",
+      "name": "void_invoice",
+      "description": "Void a draft or open invoice so it can no longer be paid or collected. Money-relevant: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "medium",
+      "provider": "stripe",
+      "input_schema": {
+        "invoice_id": { "type": "string", "required": true, "description": "Invoice ID (in_...)." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "search_charges",
+      "name": "search_charges",
+      "description": "Filtered charge search (amount range, status, customer, date window) using Stripe's Search Query Language -- not just a plain list.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "min_amount_cents": { "type": "number", "required": false, "description": "Only charges >= this amount, in cents." },
+        "max_amount_cents": { "type": "number", "required": false, "description": "Only charges <= this amount, in cents." },
+        "status": { "type": "string", "required": false, "description": "One of: succeeded, pending, failed." },
+        "customer_id": { "type": "string", "required": false, "description": "Stripe customer ID (cus_...) to filter by." },
+        "created_after": { "type": "number", "required": false, "description": "Unix timestamp; only charges created after this." },
+        "created_before": { "type": "number", "required": false, "description": "Unix timestamp; only charges created before this." },
+        "limit": { "type": "number", "required": false, "description": "Max results, 1-100." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "customer_360",
+      "name": "customer_360",
+      "description": "One-call customer overview: profile + recent charges + subscriptions, joined together. Saves 3 separate lookups.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "customer_id": { "type": "string", "required": true, "description": "Stripe customer ID (cus_...)." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "list_disputes_due_soon",
+      "name": "list_disputes_due_soon",
+      "description": "Disputes filtered and sorted by urgency -- only ones whose evidence deadline is within N days, soonest first.",
+      "wired": true,
+      "risk": "low",
+      "provider": "stripe",
+      "input_schema": {
+        "within_days": { "type": "number", "required": false, "description": "Deadline window in days. Defaults to 7." }
+      },
+      "side_effects": "none"
+    },
+    {
+      "id": "bulk_refund",
+      "name": "bulk_refund",
+      "description": "Refund up to 25 charges in one airlock-approved action. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "charge_ids": { "type": "array", "required": true, "description": "List of charge IDs (ch_...) to refund, up to 25." },
+        "reason": { "type": "string", "required": false, "description": "One of: duplicate, fraudulent, requested_by_customer. Applied to every refund in the batch." }
+      },
+      "side_effects": "external"
+    },
+    {
+      "id": "cancel_subscription_and_refund",
+      "name": "cancel_subscription_and_refund",
+      "description": "Multi-step: cancels a subscription AND refunds its latest invoice's charge in one airlock-approved action. Money-moving: gated by the airlock.",
+      "wired": true,
+      "mode": "write_requires_approval",
+      "risk": "high",
+      "provider": "stripe",
+      "input_schema": {
+        "subscription_id": { "type": "string", "required": true, "description": "Subscription ID (sub_...)." },
+        "at_period_end": { "required": false, "description": "If true, cancel at period end instead of immediately. Defaults to false (immediate)." },
+        "also_refund_latest_invoice": { "required": false, "description": "If false, only cancels (no refund). Defaults to true." }
+      },
+      "side_effects": "external"
+    }
+  ],
+  "license_required": false
+}
